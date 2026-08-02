@@ -1,0 +1,47 @@
+name: Bug report
+description: Report a reproducible gameplay or interface problem.
+title: '[Bug]: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: For vulnerabilities, use the private process in SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, OS, and device
+    validations:
+      required: true
+  - type: input
+    id: seed
+    attributes:
+      label: Run seed
+      description: Shown on the result screen or in window.__game.getSnapshot().seed.
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshot, trace, or snapshot

@@ -1,9 +1,9 @@
 {
   "name": "mournwell",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "An original, code-drawn dark cartoon room-crawler built with Phaser and TypeScript.",
+  "description": "A short browser room-crawler: fight down two depths of a haunted well and ring a toll bell that trades health for a room-wide hit.",
   "license": "MIT",
   "repository": {
     "type": "git",

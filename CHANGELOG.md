@@ -1,7 +1,13 @@
 # Changelog
 
-All notable changes are documented here. This project follows semantic
-versioning and the Keep a Changelog structure.
+## 1.1.0 - 2026-10-23
+
+- Depth II, the Drowned Belfry: beating the first Tollmother opens a well
+  down to a second layout with a second Tollmother.
+- Two new enemies on Depth II: the ashmoth and the chimewraith.
+- The toll bell (Space or the TOLL button): 15 resolve for 45 damage to every
+  enemy in the chamber, with an 8 second cooldown.
+- Removed the process docs and the exact npm version requirement.
 
 ## [1.0.0] - 2026-08-02
 
@@ -17,7 +23,7 @@ versioning and the Keep a Changelog structure.
   production assets.
 - Read-only `window.__game` observability contract plus development-only QA
   fixtures.
-- Unit/property tests, Playwright desktop/mobile journeys, CI, CodeQL,
-  Dependabot, and GitHub Pages deployment automation.
+- Unit tests, Playwright desktop/mobile journeys, CI and GitHub Pages
+  deployment.
 
 [1.0.0]: https://github.com/appleweiping/mournwell/releases/tag/v1.0.0

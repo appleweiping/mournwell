@@ -1,172 +1,74 @@
-<div align="center">
-  <img src="./public/favicon.svg" width="92" height="92" alt="MOURNWELL emblem" />
-  <h1>MOURNWELL</h1>
-  <p><strong>Descend. Break. Become.</strong></p>
-  <p>An original, code-drawn dark cartoon room-crawler for desktop and mobile.</p>
+# Mournwell
+
+A short room-by-room action game you play in the browser: fight down two depths of a haunted well, pick up relics that change how you shoot, and ring a toll bell that costs you health but hits everything in the room.
+
+**[Play it](https://appleweiping.github.io/mournwell/)**: keyboard on desktop, two thumbsticks on a phone. No install, no account.
 
 [![CI](https://github.com/appleweiping/mournwell/actions/workflows/ci.yml/badge.svg)](https://github.com/appleweiping/mournwell/actions/workflows/ci.yml)
-[![Play live](https://img.shields.io/badge/play-live%20demo-d99355?logo=githubpages&logoColor=white)](https://appleweiping.github.io/mournwell/)
-[![Phaser 3.90](https://img.shields.io/badge/Phaser-3.90-6b5b73?logo=javascript&logoColor=white)](https://phaser.io/)
-[![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![No external art](https://img.shields.io/badge/art-100%25%20code--drawn-d99355)](#originality--asset-policy)
-[![License: MIT](https://img.shields.io/badge/license-MIT-82956a.svg)](./LICENSE)
-</div>
 
-![MOURNWELL title screen](./screenshots/demo-title.png)
+![A Depth II chamber: two ashmoths and a chimewraith, then the toll bell rings](./screenshots/depth-ii-bell.gif)
 
-> 一款可直接在浏览器运行的原创暗黑卡通房间制 Roguelite：随机地牢、四向射击、差异化敌人、Boss、多点触控、可叠加遗物和完整胜负流程，所有图形与音效均由代码生成。
+_A chamber on Depth II with two ashmoths and a chimewraith. The bell rings about four seconds in: resolve drops by 15, the shots in the air vanish and every enemy takes 45 damage. Recorded from the dev build in headless Chromium; I used the dev build's test controls to jump straight to that chamber, and a small script pressed the keys._
 
-MOURNWELL is a focused 8–12 minute run built around readable four-direction combat, deterministic 5–8 room dungeons, stackable relics, and a three-phase final encounter. It borrows only genre-level ideas—room clearing, procedural layouts, and build synergies—while its world, cast, visuals, writing, numbers, UI, and generated assets are original.
+## How to play
 
-## Demo gallery
+| Desktop                    | Phone / tablet | Does                                          |
+| -------------------------- | -------------- | --------------------------------------------- |
+| `W` `A` `S` `D`            | left stick     | move                                          |
+| arrow keys                 | right stick    | cast in that direction (hold to keep casting) |
+| `Space` or the TOLL button | TOLL button    | ring the bell                                 |
+| `Esc` or `P`               | PAUSE          | pause                                         |
 
-<table>
-  <tr>
-    <td width="50%"><img src="./screenshots/demo-combat.png" alt="Three enemy archetypes and multishot combat" /></td>
-    <td width="50%"><img src="./screenshots/demo-boss.png" alt="Tollmother boss chamber and health bar" /></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Readable room combat</strong><br/><sub>Three enemy silhouettes, open/locked doors, live relic stats</sub></td>
-    <td align="center"><strong>The Tollmother</strong><br/><sub>Telegraphed, phase-based final encounter</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="./screenshots/demo-victory.png" alt="Victory summary with run metrics" /></td>
-    <td width="50%"><img src="./screenshots/demo-mobile.png" alt="Portrait mobile layout with two touch joysticks" /></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Complete run accounting</strong><br/><sub>Time, kills, relics, rooms, damage, seed, result</sub></td>
-    <td align="center"><strong>True multi-touch</strong><br/><sub>Move and cast concurrently; release and cancellation are handled</sub></td>
-  </tr>
-</table>
+Each run starts on **Depth I, the Bell Archive**: 5 to 8 chambers, one treasure room and the Tollmother waiting in the room farthest from the start. A combat chamber seals its doors until everything in it is dead. Beat the Tollmother and a well opens in the floor; step in and you drop to **Depth II, the Drowned Belfry** with your relics and remaining resolve, into a new layout and a second, angrier Tollmother. Beat her and the run is won. You can type a seed on the title screen; the same seed gives the same layouts and rewards.
 
-## Quick start
+**The toll bell.** Ringing it costs 15 resolve (out of 100). Every enemy in the chamber takes 45 damage and freezes for a moment, and all enemy shots in flight are swept away. It then needs 8 seconds of silence before it rings again, and it will not ring if 15 resolve would kill you. 45 damage kills a siltling in the first few chambers outright and takes a big bite out of everything else; on Depth II enemies are tougher, so it softens a room rather than clearing it, and against a Tollmother it buys you a breather rather than a win.
 
-Requirements: **Node.js 22+** and a modern Chromium, Firefox, or Safari browser.
+### Enemies
+
+|                | Where             | What it does                                                                                                             |
+| -------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Siltling       | both depths       | wobbles toward you, then lunges                                                                                          |
+| Wickspitter    | both depths       | keeps its distance, glows, then spits a three-shot fan                                                                   |
+| Knellguard     | both depths       | armoured from the front; lines up and charges, and is stunned if it hits a wall                                          |
+| Ashmoth        | Depth II          | darts at angles around you; bursts into a ring of slow embers when it dies                                               |
+| Chimewraith    | Depth II          | fades out (you cannot hit it then), reappears beside you, glows and fires two aimed shots                                |
+| The Tollmother | end of each depth | three phases: aimed fans, then rings of shots plus helpers (siltlings on Depth I, ashmoths on Depth II), then fast rings |
+
+### Relics
+
+Eight relics drop from chests, the treasure room and the occasional kill. Duplicates stack.
+
+| Relic           | Effect                                         |
+| --------------- | ---------------------------------------------- |
+| Iron Lament     | more damage, heavier shots                     |
+| Quickwick       | faster casting                                 |
+| Longglass       | longer range, faster shots                     |
+| Mudrunner Soles | faster movement                                |
+| Blackwax Knot   | more maximum resolve, and heals the difference |
+| Twin Rune       | three shots per cast, then five                |
+| Briar Eye       | shots pierce through enemies                   |
+| Compass Moth    | shots bend toward enemies                      |
+
+## Run it locally
+
+Needs Node.js 22 or newer.
 
 ```bash
 git clone https://github.com/appleweiping/mournwell.git
 cd mournwell
 npm ci
-npm run dev
+npm run dev            # http://localhost:4173
+npm test               # unit tests (Vitest)
+npx playwright install chromium
+npm run test:e2e       # plays the game with real keyboard and touch input
 ```
 
-Open `http://localhost:4173`. No server, account, API key, asset download, or environment file is required.
+Everything you see is drawn with Phaser graphics calls and every sound is synthesized with the Web Audio API at runtime; there are no image or audio files. How the code fits together is in [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
-Production build:
+## Credits
 
-```bash
-npm run build
-npm run preview
-```
-
-## Controls
-
-| Context | Action            | Input                                      |
-| ------- | ----------------- | ------------------------------------------ |
-| Desktop | Move              | `W` `A` `S` `D`                            |
-| Desktop | Cast continuously | Arrow keys `↑` `↓` `←` `→`                 |
-| Desktop | Pause / resume    | `Esc` or `P`                               |
-| Mobile  | Move              | Left virtual joystick                      |
-| Mobile  | Aim + cast        | Right virtual joystick                     |
-| Both    | Menus             | Native buttons with visible keyboard focus |
-
-The casting stick snaps to the four authored directions. Both touch zones retain separate pointer IDs, so movement and casting work at the same time.
-
-## Systems at a glance
-
-### Dungeon rules
-
-- A seeded generator produces exactly **5–8 grid-aligned rooms**.
-- Every room is reachable and every connection is bidirectional.
-- The Boss room is a farthest leaf at least three doors from the start.
-- A distinct treasure room is always present.
-- Combat seals every available exit; the final death opens all connected doors after a deliberate beat.
-- Cleared and visited state persists for the run; the minimap reveals visited rooms and their immediate neighbors.
-- The same seed reproduces layout, encounter composition, and reward rolls.
-
-### Enemy roster
-
-| Enemy              | Readable behavior                                               |
-| ------------------ | --------------------------------------------------------------- |
-| **Siltling**       | Wobbled pursuit, close-range lunge, recovery window             |
-| **Wickspitter**    | Maintains range, strafes, glows before a three-shot fan         |
-| **Knellguard**     | Armored front, alignment check, warning state, wall-stun charge |
-| **The Tollmother** | Fan casts → radial casts + summons → fast radial/aimed pressure |
-
-### Relic engine
-
-Relic attributes are recomputed from base values and stack counts—never compounded from a previously mutated result—so repeated pickups remain deterministic and drift-free.
-
-| Relic           | Primary effect                           |
-| --------------- | ---------------------------------------- |
-| Iron Lament     | Attack and projectile weight             |
-| Quickwick       | Faster casting cadence with a hard floor |
-| Longglass       | Range and projectile speed               |
-| Mudrunner Soles | Movement speed with a cap                |
-| Blackwax Knot   | Maximum resolve and immediate healing    |
-| Twin Rune       | Three-shot, then five-shot casting mode  |
-| Briar Eye       | Stacking pierce with post-hit falloff    |
-| Compass Moth    | Bending projectiles with a turn-rate cap |
-
-## Architecture
-
-```mermaid
-flowchart LR
-  UI["Accessible DOM UI"] -->|commands| Scenes["Phaser scenes"]
-  Touch["Keyboard + multi-touch adapters"] --> Scenes
-  Scenes --> Combat["Entities + Arcade Physics"]
-  Scenes --> Core["Pure deterministic core"]
-  Core --> RNG["Seeded RNG streams"]
-  Core --> Dungeon["Dungeon graph + validation"]
-  Core --> Relics["Relic stat derivation"]
-  Scenes --> Debug["Read-only debug snapshots"]
-  Debug --> Tests["Playwright assertions"]
-  Scenes --> UI
-```
-
-Pure TypeScript owns reproducible RNG, room topology, topology validation, and relic math. Phaser is the rendering/physics/input adapter. The DOM layer owns accessible menu, HUD, pause, results, and touch controls. See [Architecture](./docs/ARCHITECTURE.md) for lifecycle and invariants.
-
-## Runtime observability
-
-The standard build exposes a serializable, cloned, read-only snapshot:
-
-```js
-const state = window.__game.getSnapshot();
-
-state.summary.hp;
-state.summary.enemyCount;
-state.summary.bulletCount;
-state.summary.currentRoom;
-state.summary.itemIds;
-state.summary.attributes;
-state.room.doorsOpen;
-```
-
-The contract also includes enemy HP/state, both projectile counts, room graph, inventory stacks, run metrics, and FPS. Mutating fixture controls exist only when running a development build with `?qa=1`; they are absent from production.
-
-## Originality & asset policy
-
-- All characters, enemies, relics, floors, UI ornament, particles, favicon, and effects are drawn at runtime with Phaser Graphics, Canvas, CSS, or SVG source code.
-- All sound effects are synthesized at runtime with the Web Audio API.
-- No original-game art, audio, fonts, text, names, or downloaded assets are included.
-- The implementation studies genre mechanics and broad visual traits, then applies an original folk-horror identity: bell masks, archive chambers, stitched mantles, ash, wax, and silt.
-- MOURNWELL is not affiliated with or endorsed by Edmund McMillen, Nicalis, or _The Binding of Isaac_.
-- The working product name still requires jurisdiction-specific trademark and store-name clearance before a paid release.
-
-## Repository map
-
-```text
-src/game/data/        Relic definitions and stat formulas
-src/game/entities/    Player, enemy AI, and projectile adapters
-src/game/scenes/      Boot, menu ambience, and run orchestration
-src/game/systems/     RNG, dungeon, input, touch, audio, UI, save, debug
-tests/                Pure unit and 10,000-seed property tests
-e2e/                  Real keyboard/touch Playwright journeys
-screenshots/          Deterministic demo captures generated by E2E
-docs/                 Architecture notes
-.github/              CI, CodeQL, Pages, dependency automation
-```
+The room-clearing structure is borrowed from _The Binding of Isaac_. The characters, art, sounds, names and numbers here are original. Mournwell is not affiliated with Edmund McMillen or Nicalis.
 
 ## License
 
-Code and original project assets are released under the [MIT License](./LICENSE). Phaser and EventEmitter3 copyright grants are reproduced in [Third-party notices](./THIRD_PARTY_NOTICES.md) and copied into every production artifact.
+[MIT](./LICENSE). Phaser and EventEmitter3 notices are in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).

@@ -18,18 +18,6 @@
 
 MOURNWELL is a focused 8–12 minute run built around readable four-direction combat, deterministic 5–8 room dungeons, stackable relics, and a three-phase final encounter. It borrows only genre-level ideas—room clearing, procedural layouts, and build synergies—while its world, cast, visuals, writing, numbers, UI, and generated assets are original.
 
-## Why it feels complete
-
-| Pillar                    | Shipped behavior                                                                                                                                                   |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Responsive combat**     | WASD movement, held four-way casting, cadence-based cooldowns, recoil, hit flash, impact particles, camera shake, invulnerability frames                           |
-| **Deterministic dungeon** | 5–8 connected chambers, bidirectional doors, farthest-leaf Boss room, treasure room, seeded replay, discovered-room minimap                                        |
-| **Distinct enemy AI**     | Siltling pursues and lunges; Wickspitter kites and fires a telegraphed spread; Knellguard lines up armored charges; Tollmother changes pattern across three phases |
-| **Buildcraft**            | Eight original relics alter attack, fire rate, speed, range, health, multishot, pierce, and homing; duplicates stack and update the live attribute panel           |
-| **Complete run flow**     | Title → exploration → sealed combat → reward → Boss → victory, plus pause, death, restart, statistics, procedural audio, and local best-run data                   |
-| **Desktop + mobile**      | Keyboard on desktop; simultaneous two-finger movement and casting joysticks on touch devices; responsive safe-area-aware HUD                                       |
-| **Testable by design**    | Stable `window.__game` snapshot API; development-only deterministic fixtures; unit, property, and real Playwright input tests                                      |
-
 ## Demo gallery
 
 <table>
@@ -53,7 +41,7 @@ MOURNWELL is a focused 8–12 minute run built around readable four-direction co
 
 ## Quick start
 
-Requirements: **Node.js 22+**, **npm 11.17.x**, and a modern Chromium, Firefox, or Safari browser. The exact npm line enforces the reviewed install-script allowlist.
+Requirements: **Node.js 22+** and a modern Chromium, Firefox, or Safari browser.
 
 ```bash
 git clone https://github.com/appleweiping/mournwell.git
@@ -156,27 +144,6 @@ state.room.doorsOpen;
 
 The contract also includes enemy HP/state, both projectile counts, room graph, inventory stacks, run metrics, and FPS. Mutating fixture controls exist only when running a development build with `?qa=1`; they are absent from production.
 
-## Quality gates
-
-```bash
-npm ci
-npx playwright install chromium
-npm run test:all
-npm run audit:prod
-```
-
-Current release evidence:
-
-- **14/14 unit/property tests pass**, including 10,000 generated dungeons, 1,000 readable seed samples, and corrupted-save recovery.
-- Every generated seed verifies room count, reachability, unique coordinates, reciprocal doors, and special-room constraints.
-- Real Playwright input verifies movement, projectile creation, enemy damage/death, kill accounting, door unlock, pickup/stat mutation, death, victory, and simultaneous multi-touch.
-- Console errors, page errors, and failed requests fail the browser suite.
-- TypeScript strict mode and ESLint pass with zero warnings.
-- Production build succeeds at roughly **358 KB gzip** (**350.1 KiB**), including the Phaser engine.
-- Production dependency audit reports **0 known vulnerabilities**.
-
-Full evidence and iteration history live in [Quality & Verification](./docs/QUALITY.md).
-
 ## Originality & asset policy
 
 - All characters, enemies, relics, floors, UI ornament, particles, favicon, and effects are drawn at runtime with Phaser Graphics, Canvas, CSS, or SVG source code.
@@ -185,8 +152,6 @@ Full evidence and iteration history live in [Quality & Verification](./docs/QUAL
 - The implementation studies genre mechanics and broad visual traits, then applies an original folk-horror identity: bell masks, archive chambers, stitched mantles, ash, wax, and silt.
 - MOURNWELL is not affiliated with or endorsed by Edmund McMillen, Nicalis, or _The Binding of Isaac_.
 - The working product name still requires jurisdiction-specific trademark and store-name clearance before a paid release.
-
-The research method, Firecrawl result IDs, Context7 queries, and source links are documented in [Research & Design Evidence](./docs/RESEARCH.md).
 
 ## Repository map
 
@@ -198,15 +163,9 @@ src/game/systems/     RNG, dungeon, input, touch, audio, UI, save, debug
 tests/                Pure unit and 10,000-seed property tests
 e2e/                  Real keyboard/touch Playwright journeys
 screenshots/          Deterministic demo captures generated by E2E
-docs/                 Architecture, research, quality, operations
+docs/                 Architecture notes
 .github/              CI, CodeQL, Pages, dependency automation
 ```
-
-## Commercial handoff notes
-
-This repository is production-oriented, but “commercial-ready” is a process rather than a badge. Before monetization, complete trademark review, age/content ratings, store policies, device lab testing, localization, controller support, and a formal privacy assessment if telemetry is introduced. The current build collects **no analytics** and sends **no gameplay data**.
-
-See [Operations](./docs/OPERATIONS.md), [Security Policy](./SECURITY.md), and [Contributing](./CONTRIBUTING.md).
 
 ## License
 

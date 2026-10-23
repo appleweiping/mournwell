@@ -11,7 +11,6 @@
   },
   "homepage": "https://appleweiping.github.io/mournwell/",
   "bugs": "https://github.com/appleweiping/mournwell/issues",
-  "packageManager": "npm@11.17.0",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build && npm run verify:dist",
@@ -46,12 +45,6 @@
     "vitest": "^3.2.4"
   },
   "engines": {
-    "node": ">=22.0.0",
-    "npm": ">=11.17.0 <12"
-  },
-  "allowScripts": {
-    "esbuild@0.28.1": true,
-    "fsevents@2.3.2": true,
-    "fsevents@2.3.3": true
+    "node": ">=22.0.0"
   }
 }

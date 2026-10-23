@@ -67,6 +67,16 @@ class ProceduralAudio {
     window.setTimeout(() => this.tone(630, 0.3, 'sine', 0, 0.15), 75);
   }
 
+  bell(): void {
+    this.tone(196, 1.4, 'sine', 0, 0.26);
+    this.tone(494, 0.9, 'sine', 4, 0.12);
+    this.tone(1_046, 0.45, 'triangle', -6, 0.05);
+  }
+
+  bellDenied(): void {
+    this.tone(150, 0.09, 'square', 0, 0.08);
+  }
+
   boss(): void {
     this.tone(52, 0.75, 'sawtooth', -220, 0.26);
   }

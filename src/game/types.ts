@@ -1,7 +1,8 @@
 export type Direction = 'north' | 'south' | 'east' | 'west';
 export type RoomKind = 'start' | 'combat' | 'treasure' | 'boss';
 export type GamePhase = 'boot' | 'menu' | 'running' | 'paused' | 'dead' | 'victory';
-export type EnemyKind = 'siltling' | 'wickspitter' | 'knellguard' | 'tollmother';
+export type EnemyKind = 'siltling' | 'wickspitter' | 'knellguard' | 'ashmoth' | 'chimewraith' | 'tollmother';
+export type RunFixture = 'normal' | 'single-enemy' | 'loot' | 'boss' | 'descent' | 'death';
 
 export interface Vector2Like {
   x: number;
@@ -127,6 +128,12 @@ export interface GameDebugSnapshot {
     enemyProjectiles: number;
     pickups: number;
   };
+  bell: {
+    ready: boolean;
+    readyInMs: number;
+    cost: number;
+    tolls: number;
+  };
   enemies: EnemySnapshot[];
   inventory: Array<{
     id: string;
@@ -161,10 +168,7 @@ export interface GameResult {
 }
 
 export interface GameTestControls {
-  reset(options: {
-    seed: string;
-    fixture?: 'normal' | 'single-enemy' | 'loot' | 'boss' | 'death';
-  }): Promise<GameDebugSnapshot>;
+  reset(options: { seed: string; fixture?: RunFixture }): Promise<GameDebugSnapshot>;
   pause(): Promise<GameDebugSnapshot>;
   resume(): Promise<GameDebugSnapshot>;
   clearRoom(): Promise<GameDebugSnapshot>;

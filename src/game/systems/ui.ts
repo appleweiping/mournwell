@@ -38,6 +38,8 @@ export class UiController {
   private readonly bossPhase = required<HTMLElement>('#boss-phase');
   private readonly toast = required<HTMLElement>('#toast');
   private readonly soundButton = required<HTMLButtonElement>('#sound-button');
+  private readonly bellButton = required<HTMLButtonElement>('#bell-button');
+  private readonly bellTouch = required<HTMLButtonElement>('#bell-touch');
   private toastTimer: number | null = null;
   private currentSeed = 'MOURNWELL';
   private readonly removers: Array<() => void> = [];
@@ -58,6 +60,13 @@ export class UiController {
       if (scene?.phase === 'paused') scene.resumeGame();
       scene?.abandonRun();
     });
+    const toll = (button: HTMLButtonElement) => (): void => {
+      // drop focus so Space doesn't also press the button next time
+      button.blur();
+      this.getGameScene()?.tollBell();
+    };
+    this.bindButton('#bell-button', toll(this.bellButton));
+    this.bindButton('#bell-touch', toll(this.bellTouch));
     this.bindButton('#sound-button', () => {
       const enabled = !audio.isEnabled();
       audio.setEnabled(enabled);
@@ -151,6 +160,7 @@ export class UiController {
     this.renderInventory(snapshot);
     this.renderMinimap(snapshot);
     this.renderBossMeter(snapshot);
+    this.renderBell(snapshot);
   }
 
   private renderHealth(hp: number, maxHp: number): void {
@@ -279,6 +289,21 @@ export class UiController {
       `Dungeon map: ${visitedCount} of ${rooms.length} chambers visited`,
     );
     this.minimap.replaceChildren(...links, ...nodes);
+  }
+
+  private renderBell(snapshot: GameDebugSnapshot): void {
+    const { ready, readyInMs, cost } = snapshot.bell;
+    const waiting = readyInMs > 0;
+    this.bellButton.textContent = waiting
+      ? `TOLL · ${Math.ceil(readyInMs / 1000)}s`
+      : ready
+        ? `TOLL −${cost} · SPACE`
+        : 'TOLL · LOW RESOLVE';
+    this.bellTouch.textContent = waiting ? `${Math.ceil(readyInMs / 1000)}s` : 'TOLL';
+    for (const button of [this.bellButton, this.bellTouch]) {
+      button.classList.toggle('is-ready', ready);
+      button.classList.toggle('is-waiting', !ready);
+    }
   }
 
   private renderBossMeter(snapshot: GameDebugSnapshot): void {

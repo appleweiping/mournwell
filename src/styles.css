@@ -934,3 +934,37 @@ input:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+.bell-button.is-ready {
+  border-color: rgb(224 176 108 / 55%);
+  color: #e6c48f;
+}
+
+.bell-button.is-waiting {
+  opacity: 0.6;
+}
+
+.bell-touch {
+  align-self: center;
+  width: 4.4rem;
+  aspect-ratio: 1;
+  border: 1px solid rgb(224 176 108 / 40%);
+  border-radius: 50%;
+  color: #e6c48f;
+  background: rgb(9 8 10 / 70%);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.bell-touch.is-waiting {
+  opacity: 0.45;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .bell-button {
+    display: none;
+  }
+}

@@ -11,6 +11,8 @@ export class GameInput {
   private readonly shootDown: Phaser.Input.Keyboard.Key;
   private readonly shootLeft: Phaser.Input.Keyboard.Key;
   private readonly shootRight: Phaser.Input.Keyboard.Key;
+  private readonly toll: Phaser.Input.Keyboard.Key;
+  private tollQueued = false;
   private readonly shootOrder: Direction[] = [];
   private readonly removers: Array<() => void> = [];
 
@@ -25,6 +27,14 @@ export class GameInput {
     this.shootDown = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
     this.shootLeft = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
     this.shootRight = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
+    // no key capture, so Space still works on focused menu buttons
+    this.toll = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE, false);
+    // queue on the key event: a tap shorter than one frame would slip past JustDown
+    const onToll = (): void => {
+      this.tollQueued = true;
+    };
+    this.toll.on('down', onToll);
+    this.removers.push(() => this.toll.off('down', onToll));
 
     const directionKeys: Array<[Direction, Phaser.Input.Keyboard.Key]> = [
       ['north', this.shootUp],
@@ -81,7 +91,15 @@ export class GameInput {
     return null;
   }
 
+  /** True once per Space press. */
+  tollPressed(): boolean {
+    const queued = this.tollQueued;
+    this.tollQueued = false;
+    return queued;
+  }
+
   reset(): void {
+    this.tollQueued = false;
     this.shootOrder.splice(0, this.shootOrder.length);
     resetTouchInput();
   }

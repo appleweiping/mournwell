@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BASE_STATS, ITEM_BY_ID } from '@/game/data/items';
 import { gameEvents } from '@/game/events';
+import { BELL } from '@/game/systems/bell';
 import { generateDungeon } from '@/game/systems/dungeon';
 import type { GameScene } from '@/game/scenes/GameScene';
 import type { GameDebugBridge, GameDebugSnapshot, GameTestControls } from '@/game/types';
@@ -41,6 +42,7 @@ function menuSnapshot(): GameDebugSnapshot {
     },
     room: { id: room.id, index: room.index, kind: room.kind, cleared: true, doorsOpen: true, doors: [] },
     counts: { enemies: 0, playerProjectiles: 0, enemyProjectiles: 0, pickups: 0 },
+    bell: { ready: true, readyInMs: 0, cost: BELL.cost, tolls: 0 },
     enemies: [],
     inventory: [],
     stats: { ...BASE_STATS },

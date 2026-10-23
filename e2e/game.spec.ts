@@ -106,6 +106,56 @@ test.describe('desktop playable flow', () => {
     expect(runtimeErrors).toEqual([]);
   });
 
+  test('the toll bell trades resolve for a burst that clears a weak chamber', async ({ page }) => {
+    const runtimeErrors = watchRuntime(page);
+    await page.goto('/?qa=1');
+    await page.evaluate(() => window.__game.test?.reset({ seed: 'E2E-BELL-0005', fixture: 'single-enemy' }));
+    await waitForGame(page);
+    const before = await page.evaluate(() => window.__game.getSnapshot());
+    expect(before.counts.enemies).toBe(1);
+    expect(before.bell.ready).toBe(true);
+    await page.keyboard.press('Space');
+    await page.waitForFunction(() => window.__game.getSnapshot().run.kills === 1);
+    const after = await page.evaluate(() => window.__game.getSnapshot());
+    expect(after.bell.tolls).toBe(1);
+    expect(after.summary.hp).toBe(before.summary.hp - before.bell.cost);
+    expect(after.bell.readyInMs).toBeGreaterThan(0);
+    await expect(page.locator('#bell-button')).toContainText('s');
+    // a second press during the cooldown does nothing
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(150);
+    const again = await page.evaluate(() => window.__game.getSnapshot());
+    expect(again.bell.tolls).toBe(1);
+    expect(again.summary.hp).toBe(after.summary.hp);
+    await page.waitForFunction(() => window.__game.getSnapshot().room.doorsOpen);
+    expect(runtimeErrors).toEqual([]);
+  });
+
+  test('beating the first Tollmother opens the well down to Depth II', async ({ page }) => {
+    const runtimeErrors = watchRuntime(page);
+    await page.goto('/?qa=1');
+    await page.evaluate(() => window.__game.test?.reset({ seed: 'E2E-DESCENT-0006', fixture: 'descent' }));
+    await waitForGame(page);
+    await page.keyboard.down('ArrowRight');
+    await page.waitForFunction(() => {
+      const snapshot = window.__game.getSnapshot();
+      return snapshot.room.cleared && snapshot.counts.pickups > 0;
+    });
+    await page.keyboard.up('ArrowRight');
+    expect((await page.evaluate(() => window.__game.getSnapshot())).phase).toBe('running');
+    await page.waitForTimeout(800);
+    await page.keyboard.down('w');
+    await page.waitForFunction(() => window.__game.getSnapshot().floor === 2, null, { timeout: 15_000 });
+    await page.keyboard.up('w');
+    await waitForGame(page);
+    const below = await page.evaluate(() => window.__game.getSnapshot());
+    expect(below.floor).toBe(2);
+    expect(below.run.kills).toBeGreaterThanOrEqual(1);
+    expect(below.room.kind).toBe('start');
+    await expect(page.locator('#floor-label')).toContainText('DEPTH II');
+    expect(runtimeErrors).toEqual([]);
+  });
+
   test('captures deterministic demo screens from the running build', async ({ page }) => {
     const runtimeErrors = watchRuntime(page);
     await page.goto('/?qa=1');

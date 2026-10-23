@@ -47,6 +47,14 @@
               <div id="inventory" class="inventory"><span class="inventory__empty">None — yet.</span></div>
             </div>
             <div class="hud-actions">
+              <button
+                id="bell-button"
+                class="icon-button bell-button"
+                type="button"
+                aria-label="Ring the toll bell"
+              >
+                TOLL · SPACE
+              </button>
               <button id="sound-button" class="icon-button" type="button" aria-label="Toggle sound">
                 SOUND ON
               </button>
@@ -63,12 +71,13 @@
           <h1 id="game-title">MOURN<span>WELL</span></h1>
           <p class="tagline">Descend. Break. Become.</p>
           <p class="menu__copy">
-            The well remembers every shape you take. Bind strange relics, clear its living chambers, and
-            silence the Hollow Saint below.
+            Two depths, two Tollmothers. Bind strange relics, clear the living chambers, and when a room turns
+            on you, ring the bell: it costs resolve, and nothing in the chamber escapes it.
           </p>
           <div class="menu__controls" aria-label="Controls">
             <div><kbd>WASD</kbd><span>MOVE</span></div>
             <div><kbd>↑ ↓ ← →</kbd><span>CAST</span></div>
+            <div><kbd>SPACE</kbd><span>TOLL</span></div>
             <div><kbd>ESC</kbd><span>PAUSE</span></div>
           </div>
           <label class="seed-field" for="seed-input">
@@ -113,6 +122,9 @@
           >
             <span class="touch-pad__label">MOVE</span><span class="touch-pad__knob"></span>
           </div>
+          <button id="bell-touch" class="bell-touch" type="button" aria-label="Ring the toll bell">
+            TOLL
+          </button>
           <div
             id="shoot-pad"
             class="touch-pad touch-pad--shoot"

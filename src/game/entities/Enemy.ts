@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ROOM_BOUNDS } from '@/game/config';
 import type { EnemyKind, EnemySnapshot } from '@/game/types';
 
 interface EnemyConfig {
@@ -13,6 +14,8 @@ const ENEMY_CONFIG: Record<EnemyKind, EnemyConfig> = {
   siltling: { hp: 40, speed: 138, contactDamage: 12, texture: 'enemy-siltling', scale: 1 },
   wickspitter: { hp: 60, speed: 82, contactDamage: 8, texture: 'enemy-wickspitter', scale: 1 },
   knellguard: { hp: 100, speed: 76, contactDamage: 14, texture: 'enemy-knellguard', scale: 1.08 },
+  ashmoth: { hp: 34, speed: 120, contactDamage: 10, texture: 'enemy-ashmoth', scale: 1 },
+  chimewraith: { hp: 70, speed: 64, contactDamage: 12, texture: 'enemy-chimewraith', scale: 1.04 },
   tollmother: { hp: 920, speed: 62, contactDamage: 20, texture: 'boss-tollmother', scale: 1.28 },
 };
 
@@ -29,6 +32,9 @@ export class EnemyEntity extends Phaser.Physics.Arcade.Sprite {
   readonly contactDamage: number;
   hp: number;
   aiState = 'roam';
+  /** What a Tollmother calls in at her second phase. */
+  summonKind: Exclude<EnemyKind, 'tollmother'> = 'siltling';
+  private staggerUntil = 0;
   private nextActionAt: number;
   private stateEndsAt = 0;
   private strafeDirection: number;
@@ -73,6 +79,10 @@ export class EnemyEntity extends Phaser.Physics.Arcade.Sprite {
 
   updateAi(time: number, player: Phaser.Physics.Arcade.Sprite): void {
     if (!this.active || this.hp <= 0) return;
+    if (time < this.staggerUntil) {
+      this.setVelocity(0, 0);
+      return;
+    }
     const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
     const distance = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
 
@@ -85,6 +95,12 @@ export class EnemyEntity extends Phaser.Physics.Arcade.Sprite {
         break;
       case 'knellguard':
         this.updateKnellguard(time, angle, distance, player);
+        break;
+      case 'ashmoth':
+        this.updateAshmoth(time, angle);
+        break;
+      case 'chimewraith':
+        this.updateChimewraith(time, angle, player);
         break;
       case 'tollmother':
         this.updateBoss(time, angle, distance);
@@ -103,8 +119,18 @@ export class EnemyEntity extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  /** Freeze in place until `until` (the toll bell) and push back the next attack. */
+  stagger(until: number): void {
+    this.staggerUntil = Math.max(this.staggerUntil, until);
+    this.nextActionAt = Math.max(this.nextActionAt, until + 250);
+    if (this.kind === 'chimewraith' && this.aiState !== 'drift') this.reappear('drift');
+    this.setVelocity(0, 0);
+  }
+
   takeDamage(amount: number, projectileAngle?: number): { killed: boolean; applied: number } {
     if (!this.active || this.hp <= 0) return { killed: false, applied: 0 };
+    // A fading chimewraith is between places and cannot be hit.
+    if (this.kind === 'chimewraith' && this.aiState === 'veiled') return { killed: false, applied: 0 };
     let applied = amount;
     if (this.kind === 'knellguard' && this.aiState !== 'stunned' && projectileAngle !== undefined) {
       const body = this.body as Phaser.Physics.Arcade.Body;
@@ -225,6 +251,84 @@ export class EnemyEntity extends Phaser.Physics.Arcade.Sprite {
     this.scene.physics.velocityFromRotation(angle, this.baseSpeed, this.body?.velocity);
   }
 
+  // Ashmoth: flits in short dashes at angles around the player, then hovers.
+  private updateAshmoth(time: number, angle: number): void {
+    if (this.aiState === 'dash') {
+      if (time < this.stateEndsAt) return;
+      this.aiState = 'hover';
+      this.stateEndsAt = time + 380;
+    }
+    if (this.aiState === 'hover' && time < this.stateEndsAt) {
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      this.setVelocity(body.velocity.x * 0.9, body.velocity.y * 0.9);
+      return;
+    }
+    // jitter comes from the clock and the entity id, so replays stay identical
+    const jitter = Math.sin(time * 0.0137 + this.entityId.length * 1.7) * 0.9 * this.strafeDirection;
+    this.aiState = 'dash';
+    this.stateEndsAt = time + 340;
+    this.scene.physics.velocityFromRotation(angle + jitter, this.baseSpeed * 2.1, this.body?.velocity);
+  }
+
+  // Chimewraith: drifts, fades out (cannot be hit), reappears beside the
+  // player and rings a two-shot volley after a short glow.
+  private updateChimewraith(
+    time: number,
+    angle: number,
+    player: Phaser.GameObjects.Components.Transform,
+  ): void {
+    if (this.aiState === 'veiled') {
+      this.setVelocity(0, 0);
+      if (time < this.stateEndsAt) return;
+      const side = angle + Math.PI + (Math.PI / 2) * this.strafeDirection;
+      const x = Phaser.Math.Clamp(
+        player.x + Math.cos(side) * 190,
+        ROOM_BOUNDS.left + 50,
+        ROOM_BOUNDS.right - 50,
+      );
+      const y = Phaser.Math.Clamp(
+        player.y + Math.sin(side) * 190,
+        ROOM_BOUNDS.top + 50,
+        ROOM_BOUNDS.bottom - 50,
+      );
+      this.setPosition(x, y);
+      this.strafeDirection *= -1;
+      this.reappear('chiming');
+      this.stateEndsAt = time + 420;
+      this.setTint(0x9fd6d2);
+      return;
+    }
+    if (this.aiState === 'chiming') {
+      this.setVelocity(0, 0);
+      if (time < this.stateEndsAt) return;
+      const aim = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
+      this.callbacks.shoot(this, aim - 0.09, 300, 11);
+      this.callbacks.shoot(this, aim + 0.09, 300, 11);
+      this.aiState = 'drift';
+      this.nextActionAt = time + 2_100;
+      this.clearTint();
+      return;
+    }
+    if (time >= this.nextActionAt) {
+      this.aiState = 'veiled';
+      this.stateEndsAt = time + 480;
+      this.setAlpha(0.25);
+      this.setVelocity(0, 0);
+      return;
+    }
+    this.scene.physics.velocityFromRotation(
+      angle + (Math.PI / 2) * this.strafeDirection,
+      this.baseSpeed,
+      this.body?.velocity,
+    );
+  }
+
+  private reappear(state: string): void {
+    this.aiState = state;
+    this.setAlpha(1);
+    this.clearTint();
+  }
+
   private updateBoss(time: number, angle: number, distance: number): void {
     const healthRatio = this.hp / this.maxHp;
     const newPhase = healthRatio > 0.65 ? 1 : healthRatio > 0.3 ? 2 : 3;
@@ -235,8 +339,8 @@ export class EnemyEntity extends Phaser.Physics.Arcade.Sprite {
       this.setTint(newPhase === 3 ? 0xc64e4e : 0xd5b378);
       if (newPhase === 2 && !this.summoned) {
         this.summoned = true;
-        this.callbacks.summon('siltling', this.x - 80, this.y + 20);
-        this.callbacks.summon('siltling', this.x + 80, this.y + 20);
+        this.callbacks.summon(this.summonKind, this.x - 80, this.y + 20);
+        this.callbacks.summon(this.summonKind, this.x + 80, this.y + 20);
       }
     }
     if (time >= this.nextActionAt) {
@@ -268,6 +372,7 @@ export class EnemyEntity extends Phaser.Physics.Arcade.Sprite {
     if (this.kind === 'wickspitter' && this.aiState === 'windup') this.setTint(0xd99458);
     else if (this.kind === 'knellguard' && this.aiState === 'telegraph') this.setTint(0xc85d55);
     else if (this.kind === 'knellguard' && this.aiState === 'stunned') this.setTint(0x819192);
+    else if (this.kind === 'chimewraith' && this.aiState === 'chiming') this.setTint(0x9fd6d2);
     else if (this.kind === 'tollmother' && this.phase >= 2)
       this.setTint(this.phase === 3 ? 0xc64e4e : 0xd5b378);
   }

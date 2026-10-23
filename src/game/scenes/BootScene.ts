@@ -88,6 +88,49 @@ export class BootScene extends Phaser.Scene {
     graphics.generateTexture('enemy-knellguard', 64, 64);
     graphics.clear();
 
+    // Ashmoth: a moth of soot with ember-edged wings (Depth II).
+    graphics.fillStyle(0x09080b, 0.28).fillEllipse(32, 54, 30, 8);
+    graphics
+      .fillStyle(0x3a3134)
+      .lineStyle(3, 0x0a090c)
+      .fillTriangle(30, 30, 6, 14, 10, 44)
+      .strokeTriangle(30, 30, 6, 14, 10, 44)
+      .fillTriangle(34, 30, 58, 14, 54, 44)
+      .strokeTriangle(34, 30, 58, 14, 54, 44);
+    graphics.lineStyle(2, 0xd9733f, 0.85).lineBetween(8, 16, 12, 42).lineBetween(56, 16, 52, 42);
+    graphics
+      .fillStyle(0x59494c)
+      .lineStyle(3, 0x0a090c)
+      .fillEllipse(32, 32, 12, 24)
+      .strokeEllipse(32, 32, 12, 24);
+    graphics.fillStyle(0xf0b36a).fillCircle(29, 25, 2).fillCircle(35, 25, 2);
+    graphics.lineStyle(2, 0x2a2224).lineBetween(30, 20, 25, 11).lineBetween(34, 20, 39, 11);
+    graphics.generateTexture('enemy-ashmoth', 64, 64);
+    graphics.clear();
+
+    // Chimewraith: a hanging chime-tube with a drowned, hollow face (Depth II).
+    graphics.fillStyle(0x09080b, 0.3).fillEllipse(32, 57, 30, 8);
+    graphics.lineStyle(2, 0x5f7c7d).lineBetween(32, 2, 32, 9);
+    graphics
+      .fillStyle(0x3e5a5d)
+      .lineStyle(3, 0x09080b)
+      .fillRoundedRect(19, 9, 26, 40, 9)
+      .strokeRoundedRect(19, 9, 26, 40, 9);
+    graphics.fillStyle(0x7fa8a4).fillRoundedRect(23, 13, 6, 30, 3);
+    graphics
+      .fillStyle(0x0d1213)
+      .fillEllipse(27, 26, 6, 9)
+      .fillEllipse(37, 26, 6, 9)
+      .fillEllipse(32, 39, 8, 5);
+    graphics
+      .fillStyle(0x2b3f41)
+      .lineStyle(3, 0x09080b)
+      .fillTriangle(17, 47, 47, 47, 32, 58)
+      .strokeTriangle(17, 47, 47, 47, 32, 58);
+    graphics.fillStyle(0xbfe3dc).fillCircle(32, 56, 2.5);
+    graphics.generateTexture('enemy-chimewraith', 64, 64);
+    graphics.clear();
+
     // The Tollmother: original bell-and-roots silhouette, no borrowed character geometry.
     graphics.fillStyle(0x09080b, 0.4).fillEllipse(48, 86, 74, 15);
     graphics

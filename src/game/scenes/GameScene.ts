@@ -9,12 +9,14 @@ import {
   ROOM_BOUNDS,
   WALL_THICKNESS,
 } from '@/game/config';
+import { LAST_FLOOR, floorSeed, floorTheme, type FloorTheme } from '@/game/data/floors';
 import { ITEM_BY_ID, ITEM_DEFINITIONS, addItem, deriveStats } from '@/game/data/items';
 import { EnemyEntity, type EnemyCallbacks } from '@/game/entities/Enemy';
 import { PlayerEntity } from '@/game/entities/Player';
 import { ProjectileEntity } from '@/game/entities/Projectile';
 import { gameEvents } from '@/game/events';
 import { audio } from '@/game/systems/audio';
+import { BELL, bellStatus, tollBell } from '@/game/systems/bell';
 import { generateDungeon } from '@/game/systems/dungeon';
 import { SeededRng } from '@/game/systems/rng';
 import {
@@ -29,11 +31,31 @@ import {
   type Inventory,
   type PlayerStats,
   type RoomNode,
+  type RunFixture,
 } from '@/game/types';
+
+interface RunStats {
+  kills: number;
+  pickups: number;
+  roomsCleared: number;
+  damageDealt: number;
+  damageTaken: number;
+}
+
+interface RunCarry {
+  inventory: Inventory;
+  hp: number;
+  runClockMs: number;
+  runStats: RunStats;
+  tolls: number;
+}
 
 interface GameSceneData {
   seed?: string;
-  fixture?: 'normal' | 'single-enemy' | 'loot' | 'boss' | 'death';
+  fixture?: RunFixture;
+  floor?: number;
+  /** State handed down the well from the previous depth. */
+  carry?: RunCarry;
 }
 
 const CENTER = { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 } as const;
@@ -53,6 +75,7 @@ export class GameScene extends Phaser.Scene {
   currentRoom!: RoomNode;
   doorsOpen = false;
   tick = 0;
+  floor = 1;
 
   private fixture: GameSceneData['fixture'] = 'normal';
   private roomRng!: SeededRng;
@@ -65,6 +88,9 @@ export class GameScene extends Phaser.Scene {
   private roomRewardDropped = false;
   private roomsWithoutReward = 0;
   private enemySequence = 0;
+  private theme: FloorTheme = floorTheme(1);
+  private bellReadyAt = 0;
+  private tolls = 0;
   private walls!: Phaser.Physics.Arcade.StaticGroup;
   private closedDoors!: Phaser.Physics.Arcade.StaticGroup;
   private enemies!: Phaser.Physics.Arcade.Group;
@@ -75,7 +101,7 @@ export class GameScene extends Phaser.Scene {
   private roomGraphics!: Phaser.GameObjects.Graphics;
   private doorGraphics!: Phaser.GameObjects.Graphics;
   private vignette!: Phaser.GameObjects.Graphics;
-  private runStats = {
+  private runStats: RunStats = {
     kills: 0,
     pickups: 0,
     roomsCleared: 0,
@@ -90,21 +116,30 @@ export class GameScene extends Phaser.Scene {
   init(data: GameSceneData): void {
     this.seed = sanitizeSeed(data.seed);
     this.fixture = data.fixture ?? 'normal';
+    // the 'boss' fixture is the final Tollmother, so beating it ends the run
+    this.floor = Phaser.Math.Clamp(data.floor ?? (this.fixture === 'boss' ? LAST_FLOOR : 1), 1, LAST_FLOOR);
+    this.theme = floorTheme(this.floor);
     this.phase = 'running';
-    this.inventory = {};
+    const carry = data.carry;
+    this.inventory = carry ? { ...carry.inventory } : {};
     this.stats = deriveStats(this.inventory);
-    this.hp = this.stats.maxHp;
+    this.hp = carry ? Math.min(carry.hp, this.stats.maxHp) : this.stats.maxHp;
     this.tick = 0;
     this.transitioning = false;
     this.runEnding = false;
     this.roomRewardDropped = false;
     this.roomsWithoutReward = 0;
     this.enemySequence = 0;
-    this.runClockMs = this.fixture === 'boss' ? 486_000 : 0;
-    this.runStats = { kills: 0, pickups: 0, roomsCleared: 0, damageDealt: 0, damageTaken: 0 };
-    this.dungeon = generateDungeon(this.seed);
-    this.lootRng = new SeededRng(`${this.seed}::loot`);
-    this.fxRng = new SeededRng(`${this.seed}::fx`);
+    this.runClockMs = carry?.runClockMs ?? (this.fixture === 'boss' ? 486_000 : 0);
+    this.bellReadyAt = 0;
+    this.tolls = carry?.tolls ?? 0;
+    this.runStats = carry
+      ? { ...carry.runStats }
+      : { kills: 0, pickups: 0, roomsCleared: 0, damageDealt: 0, damageTaken: 0 };
+    const layoutSeed = floorSeed(this.seed, this.floor);
+    this.dungeon = generateDungeon(layoutSeed);
+    this.lootRng = new SeededRng(`${layoutSeed}::loot`);
+    this.fxRng = new SeededRng(`${layoutSeed}::fx`);
   }
 
   create(): void {
@@ -141,7 +176,11 @@ export class GameScene extends Phaser.Scene {
     this.applyFixture();
     this.phase = 'running';
     gameEvents.emit('phase', this.phase);
-    gameEvents.emit('toast', { title: 'Depth I — The Bell Archive', subtitle: this.seed, duration: 1_500 });
+    gameEvents.emit('toast', {
+      title: `Depth ${this.floor === 1 ? 'I' : 'II'} — ${this.theme.name}`,
+      subtitle: this.seed,
+      duration: 1_500,
+    });
 
     this.publishSnapshot(true);
   }
@@ -152,6 +191,7 @@ export class GameScene extends Phaser.Scene {
     this.runClockMs += activeDelta;
     this.tick += 1;
     this.player.updateControl(this.runClockMs);
+    if (this.player.controls.tollPressed()) this.tollBell();
     this.updateEnemies(this.runClockMs);
     this.updateProjectiles(activeDelta);
     this.checkDoorTraversal();
@@ -188,6 +228,42 @@ export class GameScene extends Phaser.Scene {
     this.publishSnapshot(true);
   }
 
+  /**
+   * Ring the toll bell: pay resolve, and every enemy in the chamber takes a
+   * heavy hit, flinches, and its shots in flight are swept away.
+   */
+  tollBell(): void {
+    if (this.phase !== 'running' || this.runEnding || this.transitioning) return;
+    const result = tollBell(this.hp, this.runClockMs, this.bellReadyAt);
+    if (!result.rung) {
+      audio.bellDenied();
+      gameEvents.emit('toast', {
+        title: result.blockedBy === 'cooldown' ? 'THE BELL STILL HUMS' : 'TOO LITTLE RESOLVE',
+        subtitle: result.blockedBy === 'cooldown' ? 'WAIT FOR THE SILENCE' : `A TOLL COSTS ${BELL.cost}`,
+        duration: 700,
+      });
+      return;
+    }
+    const paid = this.hp - result.hp;
+    this.hp = result.hp;
+    this.runStats.damageTaken += paid;
+    this.bellReadyAt = result.readyAt;
+    this.tolls += 1;
+    for (const enemy of this.activeEnemies()) {
+      enemy.stagger(result.staggerUntil);
+      const hit = enemy.takeDamage(result.damage);
+      this.runStats.damageDealt += hit.applied;
+      if (hit.killed) this.killEnemy(enemy);
+    }
+    // after the kills, so embers from a bursting ashmoth are swept away too
+    this.enemyProjectiles.clear(true, true);
+    this.spawnTollRing(this.player.x, this.player.y);
+    audio.bell();
+    this.cameras.main.shake(180, 0.006);
+    gameEvents.emit('toast', { title: 'THE BELL TOLLS', subtitle: `RESOLVE −${paid}`, duration: 800 });
+    this.publishSnapshot(true);
+  }
+
   abandonRun(): void {
     if (this.phase === 'dead' || this.phase === 'victory') return;
     this.finishRun(false);
@@ -203,12 +279,13 @@ export class GameScene extends Phaser.Scene {
       .map(([direction, targetRoomId]) => ({ direction, targetRoomId, locked: !this.doorsOpen }))
       .sort((left, right) => left.direction.localeCompare(right.direction));
     const elapsedMs = this.elapsedMs();
+    const bell = bellStatus(this.hp, this.runClockMs, this.bellReadyAt);
     return {
       schemaVersion: 1,
       phase: this.phase,
       seed: this.seed,
       tick: this.tick,
-      floor: 1,
+      floor: this.floor,
       summary: {
         hp: this.hp,
         maxHp: this.stats.maxHp,
@@ -246,6 +323,12 @@ export class GameScene extends Phaser.Scene {
         playerProjectiles,
         enemyProjectiles,
         pickups: this.pickups.countActive(true),
+      },
+      bell: {
+        ready: bell.ready,
+        readyInMs: bell.readyInMs,
+        cost: BELL.cost,
+        tolls: this.tolls,
       },
       enemies,
       inventory: Object.entries(this.inventory)
@@ -366,7 +449,7 @@ export class GameScene extends Phaser.Scene {
         audio.boss();
         gameEvents.emit('toast', {
           title: 'THE TOLLMOTHER',
-          subtitle: 'THE LAST BELL WAKES',
+          subtitle: this.floor === LAST_FLOOR ? 'THE LAST BELL WAKES' : 'THE FIRST BELL WAKES',
           duration: 1_300,
         });
       } else {
@@ -399,7 +482,7 @@ export class GameScene extends Phaser.Scene {
     graphics.clear();
     graphics.fillStyle(0x0b090d).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     graphics
-      .fillStyle(this.currentRoom.kind === 'boss' ? 0x211318 : 0x1b171c)
+      .fillStyle(this.currentRoom.kind === 'boss' ? this.theme.bossFloorColor : this.theme.floorColor)
       .fillRoundedRect(
         ROOM_BOUNDS.left,
         ROOM_BOUNDS.top,
@@ -408,7 +491,7 @@ export class GameScene extends Phaser.Scene {
         18,
       );
     graphics
-      .lineStyle(5, this.currentRoom.kind === 'boss' ? 0x5c3037 : 0x40363e, 0.95)
+      .lineStyle(5, this.currentRoom.kind === 'boss' ? this.theme.bossWallColor : this.theme.wallColor, 0.95)
       .strokeRoundedRect(
         ROOM_BOUNDS.left,
         ROOM_BOUNDS.top,
@@ -531,8 +614,8 @@ export class GameScene extends Phaser.Scene {
 
   private spawnCombatWave(room: RoomNode): void {
     const count = Math.min(6, 2 + Math.floor(room.distance / 2) + this.roomRng.int(0, 2));
-    const kinds: Array<Exclude<EnemyKind, 'tollmother'>> = ['siltling', 'wickspitter', 'knellguard'];
-    const primary = kinds[room.index % kinds.length] ?? 'siltling';
+    const kinds = this.theme.roster;
+    const primary = kinds[room.index % this.theme.primaries] ?? 'siltling';
     for (let index = 0; index < count; index += 1) {
       const kind =
         index === 0 ? primary : this.roomRng.pick(kinds.slice(0, Math.min(kinds.length, 1 + room.distance)));
@@ -555,7 +638,7 @@ export class GameScene extends Phaser.Scene {
         if (this.activeEnemies().length < 7) this.spawnEnemy(kind, spawnX, spawnY);
       },
     };
-    const difficulty = 1 + this.currentRoom.distance * 0.055;
+    const difficulty = 1 + this.currentRoom.distance * 0.055 + this.theme.difficultyBonus;
     const enemy = new EnemyEntity(
       this,
       `enemy-${this.currentRoom.id}-${this.enemySequence}`,
@@ -567,6 +650,7 @@ export class GameScene extends Phaser.Scene {
       difficulty,
       hpOverride,
     );
+    enemy.summonKind = this.theme.bossSummon;
     this.enemies.add(enemy);
     return enemy;
   }
@@ -668,10 +752,26 @@ export class GameScene extends Phaser.Scene {
   private killEnemy(enemy: EnemyEntity): void {
     if (!enemy.active) return;
     const { x, y, kind } = enemy;
+    // an ashmoth comes apart in a ring of slow embers
+    if (kind === 'ashmoth') this.shootRadial(enemy, 6, 135, 8, this.runClockMs / 500);
     enemy.destroy();
     this.runStats.kills += 1;
     this.spawnDeathBurst(x, y, kind === 'tollmother' ? 24 : 12);
     this.cameras.main.shake(kind === 'tollmother' ? 260 : 90, kind === 'tollmother' ? 0.008 : 0.003);
+
+    if (kind === 'tollmother' && this.floor < LAST_FLOOR) {
+      this.currentRoom.cleared = true;
+      this.runStats.roomsCleared += 1;
+      for (const survivor of this.activeEnemies()) survivor.destroy();
+      this.enemyProjectiles.clear(true, true);
+      this.doorsOpen = true;
+      this.updateDoors();
+      this.spawnDescent(ROOM_CENTER.x, ROOM_CENTER.y);
+      audio.door();
+      gameEvents.emit('toast', { title: 'THE WELL OPENS', subtitle: 'STEP IN TO DESCEND', duration: 1_600 });
+      this.publishSnapshot(true);
+      return;
+    }
 
     if (kind === 'tollmother') {
       this.currentRoom.cleared = true;
@@ -731,6 +831,54 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: chest, y: y - 7, duration: 680, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
   }
 
+  private spawnDescent(x: number, y: number): void {
+    const well = this.physics.add.image(x, y, 'floor-exit');
+    well
+      .setDepth(6)
+      .setImmovable(true)
+      .setData('pickupType', 'descent')
+      .setData('availableAt', this.runClockMs + 600);
+    this.pickups.add(well);
+    this.bindPickupLifecycle(well);
+    this.tweens.add({ targets: well, angle: 360, duration: 6_000, repeat: -1 });
+  }
+
+  private descend(): void {
+    if (this.transitioning || this.runEnding) return;
+    this.transitioning = true;
+    this.player.controls.reset();
+    this.player.setVelocity(0, 0);
+    this.physics.pause();
+    const carry: RunCarry = {
+      inventory: { ...this.inventory },
+      hp: this.hp,
+      runClockMs: this.runClockMs,
+      runStats: { ...this.runStats },
+      tolls: this.tolls,
+    };
+    this.cameras.main.fadeOut(420, 4, 3, 6);
+    this.time.delayedCall(440, () => this.scene.restart({ seed: this.seed, floor: this.floor + 1, carry }));
+  }
+
+  private spawnTollRing(x: number, y: number): void {
+    const rings: Array<[number, number]> = [
+      [0, 0xe0b06c],
+      [90, 0x9fd6d2],
+    ];
+    for (const [delay, color] of rings) {
+      const ring = this.add.circle(x, y, 18).setStrokeStyle(4, color, 0.85).setDepth(31);
+      this.tweens.add({
+        targets: ring,
+        radius: 520,
+        alpha: 0,
+        delay,
+        duration: 520,
+        ease: 'Cubic.Out',
+        onComplete: () => ring.destroy(),
+      });
+    }
+  }
+
   private spawnOil(x: number, y: number): void {
     const oil = this.physics.add.image(x, y, 'oil-pickup');
     oil
@@ -788,6 +936,10 @@ export class GameScene extends Phaser.Scene {
       const item = this.lootRng.pick(ITEM_DEFINITIONS);
       this.spawnItem(item.id, x, y, false);
       audio.door();
+      return;
+    }
+    if (type === 'descent') {
+      this.descend();
       return;
     }
     if (type === 'oil') {
@@ -916,6 +1068,13 @@ export class GameScene extends Phaser.Scene {
       this.currentRoom.cleared = true;
       this.doorsOpen = true;
       this.spawnItem('iron-lament', this.player.x + 95, this.player.y, true);
+      this.updateDoors();
+    }
+    if (this.fixture === 'descent') {
+      this.currentRoom.kind = 'boss';
+      this.currentRoom.cleared = false;
+      this.doorsOpen = false;
+      this.spawnEnemy('tollmother', this.player.x + 165, this.player.y, 18);
       this.updateDoors();
     }
     if (this.fixture === 'boss') {

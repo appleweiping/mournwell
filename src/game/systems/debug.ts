@@ -73,7 +73,10 @@ export function createDebugBridge(game: Phaser.Game): GameDebugBridge {
     new Promise((resolve, reject) =>
       requestAnimationFrame(() => {
         try {
-          resolve(clone(getScene().getDebugSnapshot()));
+          const scene = getScene();
+          // a reset may have stopped the scene since this was requested
+          const live = scene.sys.isActive() || scene.sys.isPaused();
+          resolve(clone(live ? scene.getDebugSnapshot() : latest));
         } catch (error) {
           reject(error instanceof Error ? error : new Error(String(error)));
         }

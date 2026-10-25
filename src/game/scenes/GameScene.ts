@@ -217,13 +217,17 @@ export class GameScene extends Phaser.Scene {
     this.player.controls.reset();
     gameEvents.emit('phase', this.phase);
     this.publishSnapshot(true);
-    this.scene.pause();
+    // Through the scene manager, not this.scene: the ScenePlugin versions are
+    // queued until the next frame, and a queued resume that lands after the
+    // scene was stopped (unpause, then restart before the next frame) brings
+    // the shut-down scene back to life and kills the game loop.
+    this.game.scene.pause(this.scene.key);
   }
 
   resumeGame(): void {
     if (this.phase !== 'paused') return;
     this.phase = 'running';
-    this.scene.resume();
+    this.game.scene.resume(this.scene.key);
     gameEvents.emit('phase', this.phase);
     this.publishSnapshot(true);
   }

@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 function watchRuntime(page: Page): string[] {
@@ -100,7 +99,7 @@ test.describe('desktop playable flow', () => {
     await expect(page.locator('#result-title')).toContainText('Silence');
     await expect(page.locator('#toast')).toHaveClass(/is-hidden/, { timeout: 4_000 });
     await page.screenshot({
-      path: path.join(process.cwd(), 'screenshots', 'demo-victory.png'),
+      path: test.info().outputPath('demo-victory.png'),
       fullPage: true,
     });
     expect(runtimeErrors).toEqual([]);
@@ -131,6 +130,20 @@ test.describe('desktop playable flow', () => {
     expect(runtimeErrors).toEqual([]);
   });
 
+  test('unpausing and restarting in the same frame keeps the game loop alive', async ({ page }) => {
+    const runtimeErrors = watchRuntime(page);
+    await page.goto('/?qa=1');
+    await page.evaluate(() => window.__game.test?.reset({ seed: 'E2E-RACE-0007', fixture: 'single-enemy' }));
+    await waitForGame(page);
+    await page.evaluate(async () => {
+      await window.__game.test?.pause();
+      void window.__game.test?.resume();
+      await window.__game.test?.reset({ seed: 'E2E-RACE-0007', fixture: 'single-enemy' });
+    });
+    await page.waitForFunction(() => window.__game.getSnapshot().run.elapsedMs > 300);
+    expect(runtimeErrors).toEqual([]);
+  });
+
   test('beating the first Tollmother opens the well down to Depth II', async ({ page }) => {
     const runtimeErrors = watchRuntime(page);
     await page.goto('/?qa=1');
@@ -156,11 +169,11 @@ test.describe('desktop playable flow', () => {
     expect(runtimeErrors).toEqual([]);
   });
 
-  test('captures deterministic demo screens from the running build', async ({ page }) => {
+  test('renders a busy combat room and the Tollmother without errors', async ({ page }) => {
     const runtimeErrors = watchRuntime(page);
     await page.goto('/?qa=1');
     await page.screenshot({
-      path: path.join(process.cwd(), 'screenshots', 'demo-title.png'),
+      path: test.info().outputPath('demo-title.png'),
       fullPage: true,
     });
     await page.evaluate(() => window.__game.test?.reset({ seed: 'ASH-CANTICLE-2048', fixture: 'normal' }));
@@ -179,7 +192,7 @@ test.describe('desktop playable flow', () => {
     await page.waitForTimeout(240);
     await page.keyboard.up('ArrowUp');
     await page.screenshot({
-      path: path.join(process.cwd(), 'screenshots', 'demo-combat.png'),
+      path: test.info().outputPath('demo-combat.png'),
       fullPage: true,
     });
     await page.evaluate(() => window.__game.test?.reset({ seed: 'LAST-TOLL-2048', fixture: 'normal' }));
@@ -192,7 +205,7 @@ test.describe('desktop playable flow', () => {
     await page.evaluate(() => window.__game.test?.spawnEnemy('tollmother', { x: 720, y: 170, hp: 920 }));
     await expect(page.locator('#boss-meter')).toBeVisible();
     expect((await page.evaluate(() => window.__game.getSnapshot())).player.active).toBe(true);
-    await page.screenshot({ path: path.join(process.cwd(), 'screenshots', 'demo-boss.png'), fullPage: true });
+    await page.screenshot({ path: test.info().outputPath('demo-boss.png'), fullPage: true });
     const bossFrame = await page.evaluate(() => window.__game.getSnapshot());
     expect([bossFrame.summary.hp, bossFrame.player.x, bossFrame.player.y].every(Number.isFinite)).toBe(true);
     expect(bossFrame.player).toMatchObject({ active: true, visible: true, renderable: true });
@@ -260,7 +273,7 @@ test.describe('mobile multi-touch flow', () => {
     });
     await page.waitForFunction(() => window.__game.getSnapshot().counts.enemies === 2);
     await page.screenshot({
-      path: path.join(process.cwd(), 'screenshots', 'demo-mobile.png'),
+      path: test.info().outputPath('demo-mobile.png'),
       fullPage: true,
     });
     await page.evaluate(() => window.__game.test?.clearRoom());

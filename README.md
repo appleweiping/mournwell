@@ -6,7 +6,7 @@ A short room-by-room action game you play in the browser: fight down two depths 
 
 [![CI](https://github.com/appleweiping/mournwell/actions/workflows/ci.yml/badge.svg)](https://github.com/appleweiping/mournwell/actions/workflows/ci.yml)
 
-![A Depth II chamber: two ashmoths and a chimewraith, then the toll bell rings](./screenshots/depth-ii-bell.gif)
+![A Depth II chamber: two ashmoths and a chimewraith, then the toll bell rings](./docs/depth-ii-bell.gif)
 
 _A chamber on Depth II with two ashmoths and a chimewraith. The bell rings about four seconds in: resolve drops by 15, the shots in the air vanish and every enemy takes 45 damage. Recorded from the dev build in headless Chromium; I used the dev build's test controls to jump straight to that chamber, and a small script pressed the keys._
 

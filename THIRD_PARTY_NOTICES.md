@@ -1,6 +1,6 @@
 # Third-party notices
 
-MOURNWELL's authored game code and original generated assets are licensed under
+Mournwell's own code, art and sounds are licensed under
 the repository's MIT License. The production JavaScript bundle includes the
 following third-party software. Their license texts are reproduced here because
 minification does not preserve every upstream banner.
